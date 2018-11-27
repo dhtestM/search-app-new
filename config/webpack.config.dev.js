@@ -142,14 +142,29 @@ module.exports = {
           {
             test: /\.(js|jsx|mjs)$/,
             include: paths.appSrc,
+            exclude: /node_modules/,
             loader: require.resolve('babel-loader'),
             options: {
               
               // This is a feature of `babel-loader` for webpack (not Babel itself).
               // It enables caching results in ./node_modules/.cache/babel-loader/
               // directory for faster rebuilds.
-              cacheDirectory: true,
-            },
+              cacheDirectory: true
+            }
+          },
+          {
+            test: /\.(js|jsx)$/,
+            include: [/node_modules(\\|\/)@pearson-incubator(\\|\/)(?!aquila-js-media)/,
+            /node_modules(\\|\/)@pearson-incubator(\\|\/)(?!aquila-js-core)/],
+            use: [
+              {
+                loader: 'babel-loader',
+                options: {
+                  cacheDirectory: true,
+                  presets: ['env', 'react', 'stage-0']
+                }
+              }
+            ]
           },
            {
             test: /\.scss$/,

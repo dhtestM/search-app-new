@@ -1,0 +1,205 @@
+/**
+ * PEARSON PROPRIETARY AND CONFIDENTIAL INFORMATION SUBJECT TO NDA
+ * Copyright © 2017 Pearson Education, Inc.
+ * All Rights Reserved.
+ *
+ * NOTICE:  All information contained herein is, and remains
+ * the property of Pearson Education, Inc.  The intellectual and technical concepts contained
+ * herein are proprietary to Pearson Education, Inc. and may be covered by U.S. and Foreign Patents,
+ * patent applications, and are protected by trade secret or copyright law.
+ * Dissemination of this information, reproduction of this material, and copying or distribution of this software
+ * is strictly forbidden unless prior written permission is obtained
+ * from Pearson Education, Inc.
+ **/
+
+
+/**
+ * CSS Mixins for the project.
+ *
+ * @author Hari Gangadharan
+ */
+
+@import url('https://fonts.googleapis.com/css?family=Open+Sans:300,400,600');
+@import url('https://fonts.googleapis.com/css?family=Roboto:400,500');
+
+@mixin shimmer($width,$height,$marginTop,$marginBottom) {
+  &:empty {
+    position: relative;
+    overflow: hidden;
+    width: $width;
+    height: $height;
+    margin-top: $marginTop;
+    margin-bottom: $marginBottom;
+    background: #eeeeee;
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, #eeeeee, #fafafa, #eeeeee);
+        animation: progress 1s ease-in-out infinite;
+    }
+  }
+}
+
+@mixin cardPanel($width,$borderColor) {
+  width: $width;
+  height: auto;
+  background-color: $background;
+  float: $floatLeft;
+  border: solid 1px $borderColor;
+}
+
+@mixin thumbImg($width,$height,$padding) {
+  width: $width;
+  height: $height;
+  padding: $padding;
+  object-fit: contain;
+}
+
+@mixin cardTitle($fontSize,$lineHeight) {
+  @include fontSize($fontSize);
+  font-family: $fontFamily;
+  line-height: $lineHeight;
+  color: $title;
+}
+
+@mixin fontSize($size) {
+  font-size: $size;
+}
+
+@mixin fontWeight($weight) {
+  font-weight: $weight;
+}
+
+@keyframes progress {
+  0% {
+      transform: translate3d(-100%, 0, 0);
+  }
+  100% {
+      transform: translate3d(100%, 0, 0);
+  }
+}
+
+$fontFamily:'Open Sans', sans-serif;
+$androidBannerFontFamily:'Roboto', sans-serif;
+$fontWeightSmall: 300;
+$fontWeightMedium: 400;
+$fontWeightRegular: 500;
+$fontWeightLarge: 600;
+$fontWeightXLarge: 700;
+$fontWeightXXLarge: 800;
+$defaultFontColor: #252525;
+$defaultLinkColor: #007fa3;
+$title: #252525; // @deprecated use defaultFontColor
+$time: #535959;
+$dateDisplay: $title;
+$buttonBorderRadius: 100px;
+$defaultButtonBorderColor: #c7c7c7;
+$defaultButtonTextColor: #6a7070;
+$defaultButtonBorder: 1px solid $defaultButtonBorderColor;
+$AssignmentDate: #6a7070; // @deprecated
+$quizStatus: $AssignmentDate;
+$monthDisplay :#888888;
+$schMonth: $AssignmentDate;
+$schWeekday: $AssignmentDate;
+$schDay: $AssignmentDate;
+$schQuizStatus: $AssignmentDate;
+$schTitle: $title;
+$schTime: $time;
+$schList: $title;
+$brixlight: #fafafa;
+$schListBg: #f9f9f9;
+$schBorder: #d3d3d3;
+$schShowHide: $AssignmentDate;
+$background: #FFF;
+$moreInfoBorder: #e9e9e9;
+$tocBorderColor: #F5F5F5;
+$dividerColor: #dddddd;
+$duedateColor: $AssignmentDate;
+$quizStatusColor: #007fa3; // @deprecated use defaultLinkColor
+$raisedButtonColor: #047a9c;
+$raisedButtonHoverColor: rgba(4,122,156,0.8);
+$tabHighlightColor: #83BFFC;
+$cardHeading: #333333;
+$border: #d9d9d9;
+$studyToolsText: $AssignmentDate;
+$studyToosDivider: #979797;
+$tocHoverColor: $schListBg;
+$progressForeColor: $raisedButtonColor;
+$inProgressIcon: #24A4A2;
+$greyIcon: #C7C7C7; // @deprecated
+$secondary: #26A4A2;
+$bannerButtonColor: #0579ff;
+$floatRight:right;
+$floatLeft:left;
+$bannerButtonLabel: #ffffff;
+$assessmentPolicy: #393c3d;
+$paperBorder: #76d5d4;
+$paperShadow: #000033;
+$tealGradient: #72e3e2;
+$smallPhoneScreen: "screen and (max-width: 400px)";
+$phoneScreen: "screen and (max-width: 500px)";
+$smallScreen: "screen and (max-width: 767px)";
+$mediumScreen: "screen and (min-width: 768px) and (max-width: 1030px)";
+$fullScreen: "screen and (min-width: 1031px)";
+$smallerThanFullScreen: "screen and (max-width: 1030px)";
+$quizStart: #ffb81c;
+$pastDueColor: #db0020;
+$quizStartColor: #7e7f80;
+$scheduleHoverColor: #eeeeee;
+$scheduleBorderColor: #f5f5f5;
+$scheduleTextColor: $title;
+$scheduleCoverBorderColor: $moreInfoBorder;
+$scheduleBackgroundColor: $background;
+$lastLocationColor: #e1f5f5;
+$sideBarColor: #19a5a3;
+$focusColor: #87c0fb;
+$playerSelectionColor: #22b6b4;
+$playerTrackColor: #d9d9d9;
+
+:export {
+  raisedButtonColor: $raisedButtonColor;
+  raisedButtonHoverColor: $raisedButtonHoverColor;
+  title: $title;
+  whiteBackGround: $background;
+  secondary: $secondary;
+  inProgressIcon: $inProgressIcon;
+  greyIcon: $greyIcon;
+  completedIcon: #10853C;
+  AssignmentDate: $AssignmentDate;
+  moreInfoBorder: $moreInfoBorder;
+  paperBorder: $paperBorder;
+  paperShadow: $paperShadow;
+  progressForeColor: $progressForeColor;
+  progressBackColor: $tocBorderColor;
+  progressBackColorIndividual: $moreInfoBorder;
+  tocBorderColor: $tocBorderColor;
+  border: $border;
+  yellowNote: #FFD232;
+  questionsNote: #FFEDAD;
+  greeenNote: #55DF49;
+  ideaNote: #BBF2B6;
+  pinkNote: #FC92CF;
+  observationsNote: #FED3EC;
+  blueNote: #7DF9FB;
+  fontFamily: $fontFamily;
+  fontWeightSmall: $fontWeightSmall;
+  fontWeightMedium: $fontWeightMedium;
+  fontWeightLarge: $fontWeightLarge;
+  fontWeightXLarge: $fontWeightXLarge;
+  bannerButtonColor: $bannerButtonColor;
+  bannerButtonLabel: $bannerButtonLabel;
+  cancelButton: $AssignmentDate;
+  quizStart: $quizStart;
+  quizStartColor: $quizStartColor;
+  pastDueColor: $pastDueColor;
+  defaultButtonBorder: $defaultButtonBorder;
+  defaultButtonTextColor: $defaultButtonTextColor;
+  glossaryPopupBorderColor: #b8c8cc;
+  glossaryPopupFontColor: #000;
+  playerSelectionColor: $playerSelectionColor;
+  playerTrackColor: $playerTrackColor;
+}

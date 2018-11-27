@@ -23,11 +23,17 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import Modal from '@material-ui/core/Modal';
 import { withStyles } from '@material-ui/core/styles';
-import Paper from '@material-ui/core/Paper';
-import Grid from '@material-ui/core/Grid';
 import ClickAwayListener from '@material-ui/core/ClickAwayListener';
 import TextField from '@material-ui/core/TextField';
 import InputAdornment from '@material-ui/core/InputAdornment';
+import ChapterResults from './results/ChapterResults';
+import FigureResults from './results/FigureResults';
+import PageResults from './results/PageResults';
+import GlossaryResults from './results/GlossaryResults';
+import LearningObjectiveResults from './results/LearningObjectiveResults';
+import VideoResults from './results/VideoResults';
+import YoutubeResults from './results/YoutubeResults';
+import WikiResults from './results/WikiResults';
 import Utilities from './Utils/Utilities'
 import SearchIcon from './SearchIcon';
 import CloseIcon from './CloseIcon';
@@ -63,7 +69,7 @@ const styles = theme => ({
     }
   },
   searchClear: {
-    marginLeft: '-48px',
+    marginLeft: '-36px',
     marginTop: 0,
     verticalAlign: 'baseline'
   }
@@ -74,13 +80,23 @@ class Search extends React.Component {
     super(props);
     this.searchResults = {};
     this.requestProcessing = false;
-    this.counter = null;
-    this.timeDelay = 300;
+    this.timeDelay = 50;
+    this.timer = null;
     this.state = {
       isOpen: false,
       searchText: '',
       showResults: false
     };
+  }
+
+  componentWillReceiveProps(prev, next) {
+    console.log(prev, next);
+  }
+
+  scrollToTheFirstResult() {
+    window.setTimeout(() => {
+     this.outerDiv.scroll(0, 0);
+    }, 100);
   }
 
   clearInput = () => {
@@ -100,154 +116,149 @@ class Search extends React.Component {
     if (value === '') {
       this.clearInput();
     } else {
-      if (!this.requestProcessing) {
+      if (!this.requestProcessing && !this.timer) {
         this.requestProcessing = true;
         this.getAPIResults(value);
+        this.savedSearchQuery = value;
+      } else if (!this.timer){
+         // The next API request will trigger after 'timeDelay' ms
+        this.setTimedRequest()
       }
-      // The next API request will trigger after 300ms
-      setTimeout(() => {
-        this.getAPIResults(value);
-      }, this.timeDelay);
-      
     }
+  }
+
+  setTimedRequest = () => {
+   this.timer = setTimeout(() => {
+        if (this.savedSearchQuery !== this.state.searchText) {
+          this.getAPIResults(this.state.searchText);
+          this.savedSearchQuery = this.state.searchText;
+          this.setTimedRequest();
+        } else {
+          clearTimeout(this.timer);
+          this.timer = null;
+        }
+      }, this.timeDelay);
   }
 
   renderNoResult = searchTextVal => (<div className="searchNoResults">{`Sorry, we couldn’t find any matches for ${searchTextVal}`}</div>);
 
   getAPIResults = (value) => {
-    Utilities.getSearchResults(value).then((data) => {
-      this.searchResults = Utilities.map(data);
-    if (this.searchResults.chapter.length || this.searchResults.figure.length || this.searchResults.glossary.length) {
-      this.setState({ showResults: true });
-    } else {
-      this.setState({ showResults: false });
+    let finalResults = {};
+    let youtubeResultsReturned = false;
+    let searchResultsReturned = false;
+    let wikiResultsReturned = false; 
+
+    const displayData = () => {
+      if (searchResultsReturned && youtubeResultsReturned && wikiResultsReturned) {
+        this.renderAPIData(finalResults);
+      }
     }
-    this.requestProcessing = false;
+
+    Utilities.getSearchResults(value, this.props.searchIndex).then((data) => {
+      if (data) {
+        searchResultsReturned = true; 
+        if  (data.hits.hits.length) {
+          finalResults['searchResults'] = data;
+        }
+        displayData(finalResults);
+      }
+      
     });
-  }
 
+    Utilities.getYoutubeResults(value).then((resp) => {
+      youtubeResultsReturned = true;
+      if (resp && resp.length) {
+        finalResults['youtubeResults'] = resp;
+      }
+      displayData(finalResults);
+    });
+    
+    Utilities.getWikiResults(value).then((resp) => {
+      wikiResultsReturned = true; 
+      if (resp.length) {
+        finalResults['wikiResults'] = resp;
+      }
+      displayData(finalResults);
+    }) 
+  }
+  
   renderAPIData = (results) => {
-    this.searchResults = Utilities.map(results);
-    if (this.searchResults.chapter.length || this.searchResults.figure.length || this.searchResults.glossary.length) {
+    this.requestProcessing = false;
+    this.searchResults = {};
+    if ((results.searchResults && results.searchResults.hits.hits.length) 
+        || results.youtubeResults.length || results.wikiResults.length) {
+      this.searchResults = Utilities.map(results.searchResults);
+      this.searchResults.youtubeResults = results.youtubeResults;
+      this.searchResults.wikiResults = results.wikiResults;
       this.setState({ showResults: true });
     } else {
       this.setState({ showResults: false });
     }
-    this.requestProcessing = false;
-
   }
 
   renderSearchResult = (type) => {
-    if (type === 'primary') {
+   if (type === 'primary') {
       const resultArray = [];
       for (let prop in this.searchResults) {
-        if ((prop === 'chapter' || prop == 'figure') && this.searchResults[prop].length) {
-          const numRes = this.searchResults[prop].length;
-          const heading = (<div><h5>{prop} - {`(${this.searchResults[prop].length} result${numRes > 1 ? 's' : ''})`}</h5></div>);
-           const moreResults = this.searchResults[prop].map((result, index) => {
-            let comp = null; 
-             /*eslint-disable */
-            if (result && result.highlight && result.highlight.chapterTitle && result.highlight.chapterTitle[0]) {
-              comp = (<div className="resCard">
-                <div
-                key={index}
-                dangerouslySetInnerHTML={{ __html: result.highlight.chapterTitle[0] }}
-                onClick={() => this.props.onSearchResultClick(result.id, 'moreRes', result._source.pageUrn)} 
-              />
-              {prop === 'figure' ? <div className="figTitle">{result._source.title}</div> : ''}
-              </div>);
-            } else if (result && result.highlight && result.highlight.label && result.highlight.label[0]) {
-              comp = (<div className="resCard"><div
-                key={index}
-                dangerouslySetInnerHTML={{ __html: result.highlight.label[0] }}
-                onClick={() => this.props.onSearchResultClick(result.id, 'moreRes', result._source.pageUrn)} 
-              />
-              {prop === 'figure' ? <div className="figTitle">{result._source.title}</div> : ''}
-              </div>);
-            } else if (result && result._source && result._source.chapterTitle) {
-              comp = (<div className="resCard"><div
-                key={index}
-                dangerouslySetInnerHTML={{ __html: result._source.chapterTitle }}
-                onClick={() => this.props.onSearchResultClick(result.id, 'moreRes', result._source.pageUrn)} 
-              />
-              {prop === 'figure' ? <div className="figTitle">{result._source.title}</div> : ''}
-              </div>);
-            } else if (result && result._source && result._source.label) {
-              comp = (<div className="resCard"><div
-                key={index}
-                dangerouslySetInnerHTML={{ __html: result._source.label }}
-                onClick={() => this.props.onSearchResultClick(result.id, 'moreRes', result._source.pageUrn)} 
-              />
-              {prop === 'figure' ? <div className="figTitle">{result._source.title}</div> : ''}
-              </div>);
-            }
-            /* eslint-enable */
-            return comp;
-          });
-          resultArray.push(<div>{heading}{moreResults}</div>);
+        if (prop === 'chapter' && this.searchResults[prop].length) {
+          resultArray.push(<ChapterResults results={this.searchResults[prop]} key={prop} onSearchResultClick={this.props.onSearchResultClick} />);
+        }
+        if (prop === 'figure' && this.searchResults[prop].length) {
+          resultArray.push(<FigureResults results={this.searchResults[prop]} searchIndex={this.props.searchIndex} key={prop} 
+          onSearchResultClick={this.props.onSearchResultClick}/>);
+        }
+        if (prop === 'page' && this.searchResults[prop].length) {
+          resultArray.push(<PageResults results={this.searchResults[prop]} key={prop} 
+          onSearchResultClick={this.props.onSearchResultClick}/>);
+        }
+        if (prop === 'learningObjective' && this.searchResults[prop].length) {
+          resultArray.push(<LearningObjectiveResults results={this.searchResults[prop]} key={prop} 
+          onSearchResultClick={this.props.onSearchResultClick}/>);
+        }
+        if (prop === 'video' && this.searchResults[prop].length) {
+          resultArray.push(<VideoResults results={this.searchResults[prop]} searchIndex={this.props.searchIndex} key={prop} 
+          onSearchResultClick={this.props.onSearchResultClick}/>);
         }
       }
-      return (<div><div className="took">Search took about {this.searchResults.took} ms. Total hits: {this.searchResults.total}</div>{resultArray}</div>);
+      this.scrollToTheFirstResult();
+      return (<div>{resultArray}</div>);
     } else if (type ==='secondary') {
-      for (let prop in this.searchResults) {
-        const numRes = this.searchResults[prop].length;
-        if (prop === 'glossary') {
-          const data = this.searchResults[prop];
-          if (data.length > 0) {
-            const heading = (<div><h5>{prop} - {`(${this.searchResults[prop].length} result${numRes > 1 ? 's' : ''})`}</h5></div>);
-            const glossaryResults = data.map((result, index) => {
-              let comp = null;
-              if (result && result.highlight && result.highlight.term && result.highlight.term[0]) {
-                /*eslint-disable */
-                if (result._source.definition) { 
-                  comp = (<div><div className="searchGlossaryterm" dangerouslySetInnerHTML={{ __html: (result.highlight.term[0]) }} />
-                    <div
-                      key={index}
-                      className="searchGlossaryDef"
-                      dangerouslySetInnerHTML={{ __html: result['_source'].definition }} 
-                      onClick={() => this.props.onSearchResultClick(result.id, 'glossary', result._source.pageUrn)}
-                    />
-                  </div>);/*eslint-disable */
-                }
-              } else if (result && result._source.term && result._source.definition) { /*eslint-disable */
-                comp = (<div><div className="searchGlossaryterm"  dangerouslySetInnerHTML={{ __html: (result['_source'].term) }} /> 
-                  <div
-                    key={index}
-                    className="searchGlossaryDef"
-                    dangerouslySetInnerHTML={{ __html: result._source.definition }} 
-                    onClick={() => this.props.onSearchResultClick(result.id, 'glossary', result._source.pageUrn)}
-                  />
-                  </div>);/*eslint-disable */
-              }
-              return comp;
-            });
-          return (<div>{heading}{glossaryResults}</div>);
-          }
-          return this.renderEmptyStateMsg('secondary'); 
-        }
+      const secondaryResultArray = [];
+      if (this.searchResults.glossary && this.searchResults.glossary.length > 0) {
+       secondaryResultArray.push(<GlossaryResults results={this.searchResults.glossary} key='glossary'
+       onSearchResultClick={this.props.onSearchResultClick}/>);
+      }
+      if (this.searchResults.wikiResults && this.searchResults.wikiResults.length) {
+        secondaryResultArray.push(<WikiResults results={this.searchResults.wikiResults} key='wikiResults'
+        onSearchResultClick={this.props.onSearchResultClick}/>);
+      }
+      if (this.searchResults.youtubeResults && this.searchResults.youtubeResults.length) {
+        secondaryResultArray.push(<YoutubeResults results={this.searchResults.youtubeResults} key='youtubeResults'
+        onSearchResultClick={this.props.onSearchResultClick}/>);
+      }
+      if (secondaryResultArray.length) {
+        return(<div>{secondaryResultArray}</div>)
       } 
+      return this.renderEmptyStateMsg(); 
     }
   }
 
-
   renderEmptyStateMsg = (initiator) => {
-    const primary = initiator === 'primary';
+   let primary = (initiator === 'primary'); 
+   if (primary) {
     return (
-      <div className={`emptyContainer ${ primary ? 'primaryEmpty' : 'secondaryEmpty' }`}>
+      <div className="emptyContainer primaryEmpty">
         <div className="flex">
           <div className="empty-bar1" />
           <div className="empty-bar2" />
         </div>
-        {primary && 
-        <div className="emptyMsg">Search page numbers, chapters, figures, learning objectives, terms.</div>}
+        <div className="emptyMsg">Search page numbers, chapters, figures, learning objectives, terms.</div>
       </div>
-    );
-  }
-
-  clearInput = () => {
-    this.searchResults = {};
-    this.setState({ searchText: '', showResults: false });
-  }
+    )
+   }
+   return '';
+   
+  };
 
   handleClickAway = () => {
     this.setState({
@@ -256,7 +267,6 @@ class Search extends React.Component {
   };
 
   onClose = () => {
-    console.log("onClose call back");
     this.setState({
       isOpen: false
     });
@@ -266,12 +276,8 @@ class Search extends React.Component {
     const { classes } = this.props;
     this.searchContainer = null;
     const placeHolderText = 'Search Content';
-    const iconStyle = {
-      width: 14,
-      height: 14
-    };
     return (
-      <div
+      <div className="searchWrap"
         ref={(input) => {
           this.searchContainer = input;
         }
@@ -288,7 +294,7 @@ class Search extends React.Component {
                 input: classes.bootstrapInput
               },
               endAdornment: <InputAdornment position="end" classes={{ root: classes.searchClear }} className={`clearText ${this.state.searchText !== '' ? 'showIcon' : 'hideIcon'}`}>
-                <CloseIcon iconStyle={iconStyle} fontSize={14} fill="#6a7070" className="clearIcon" clearClick={this.clearInput} ariaLabel="Clear search text content" />
+                <CloseIcon fontSize={14} fill="#6a7070" className="clearIcon" onClick={this.clearInput} aria-label="Clear search text content" />
               </InputAdornment>
             }}
             fullWidth
@@ -299,47 +305,54 @@ class Search extends React.Component {
           />
 
         </div>
+        {this.searchResults.total ? (<div className="took">Search took about {this.searchResults.took} ms. Total hits: {this.searchResults.total}
+        </div>) : ''}
       </div>
     );
   }
 
 
   renderSearchBlock = (searchTextVal) => {
-     const tempStyle = {
+    const modalStyles = {overlay: {zIndex: 1000}};
+     const panelStyle = {
       width: 'auto',
       height: '100%',
       textAlign: 'center',
       borderLeft: '1px solid #dedede',
       borderRight: '1px solid #dedede'
     };
-    return (<ClickAwayListener onClickAway={this.handleClickAway}><Modal open={this.state.isOpen} contentLabel="Search" onClose={this.onClose}>
-      <Grid className="searchPanelContainer" style={{ tempStyle }} container spacing={8}>
-        <Grid item xs={6} direction="column">
-          <Paper className="searchPanel primary" elevation={0}>
-             {this.renderInput()}
-            <div className={`searchResultContainer ${this.state.showResults ? 'responseContainer' : 'msgContainer'}`}>
-              {this.state.searchText === '' && this.renderEmptyStateMsg('primary')}
-              {this.state.searchText !== '' && this.state.showResults && this.renderSearchResult('primary')}
-              {this.state.searchText !== '' && !this.state.showResults && !this.requestProcessing && this.renderNoResult(searchTextVal)}
+    return (<ClickAwayListener onClickAway={this.handleClickAway}><Modal className="main-search-modal" open={this.state.isOpen} contentlabel="Search" onClose={this.onClose} style={ modalStyles }>
+      <div className="outer" ref={(c) => {this.outerDiv =c;}}>
+        <div className="searchPanelContainer" style={{ panelStyle }}>
+         <div className="searchPanelWrapper">
+           <div className="primaryWrap wrap">
+            <div className="searchPanel primary">
+              {this.renderInput()}
+              <div className={`searchResultContainer  ${this.state.showResults ? 'responseContainer' : 'msgContainer'}`}>
+                {this.state.searchText === '' && this.renderEmptyStateMsg('primary')}
+                {this.state.searchText !== '' && this.state.showResults && this.renderSearchResult('primary')}
+                {this.state.searchText !== '' && !this.state.showResults && !this.requestProcessing && this.renderNoResult(searchTextVal)}
+              </div>
             </div>
-          </Paper>
-        </Grid>
-        <Grid item xs={4}>
-          <Paper className="searchPanel secondary" elevation={0}>
-            <div className={`searchResultContainer ${this.state.showResults ? 'responseContainer' : 'msgContainer'}`}>
-              {this.state.searchText === '' && this.renderEmptyStateMsg()}
-              {this.state.searchText !== '' && this.state.showResults && this.renderSearchResult('secondary')}
-              {this.state.searchText !== '' && !this.state.showResults && this.renderEmptyStateMsg()}
+          </div>
+          <div className="secondaryWrap wrap">
+            <div className="searchPanel secondary" elevation={0}>
+              <div className={`searchResultContainer ${this.state.showResults ? 'responseContainer' : 'msgContainer'}`}>
+                {this.state.searchText === '' && this.renderEmptyStateMsg()}
+                {this.state.searchText !== '' && this.state.showResults && this.renderSearchResult('secondary')}
+                {this.state.searchText !== '' && !this.state.showResults && this.renderEmptyStateMsg()}
+              </div>
             </div>
-          </Paper>
-        </Grid>
-        <div className="closeBtnContainer">
-        <span className="esc">Hit <span className="escSpan">ESC</span> to close</span>
-          <div className="closeBtn">
-            <CloseIcon onClick={this.onClose} aria-label="Close" />
+          </div>
+           <div className="closeBtnContainer">
+              <span className="esc">Hit <span className="escSpan">ESC</span> to close</span>
+              <div className="closeBtn">
+                <CloseIcon onClick={this.onClose} aria-label="Close" />
+              </div>
+            </div>
           </div>
         </div>
-      </Grid>
+      </div>
     </Modal>
     </ClickAwayListener>);
   }

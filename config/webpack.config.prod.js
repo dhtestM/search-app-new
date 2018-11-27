@@ -150,8 +150,22 @@ module.exports = {
             loader: require.resolve('babel-loader'),
             options: {
               
-              compact: true,
+              compact: true
             },
+          },
+           {
+            test: /\.(js|jsx)$/,
+            include: [/node_modules(\\|\/)@pearson-incubator(\\|\/)(?!aquila-js-media)/,
+            /node_modules(\\|\/)@pearson-incubator(\\|\/)(?!aquila-js-core)/],
+            use: [
+              {
+                loader: 'babel-loader',
+                options: {
+                  cacheDirectory: true,
+                  presets: ['env', 'react', 'stage-0']
+                }
+              }
+            ]
           },
           // The notation here is somewhat confusing.
           // "postcss" loader applies autoprefixer to our CSS.
